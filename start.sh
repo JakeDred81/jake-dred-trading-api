@@ -1,4 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-# Run your Flask app with gunicorn
+# Activate the virtual environment
+source .venv/bin/activate
+
+# Start the Flask app using gunicorn
 gunicorn main:app
