@@ -1,7 +1,5 @@
---upgrade pip
 flask
 gunicorn==23.0.0
 tradingview-ta
 yfinance
 matplotlib
-
