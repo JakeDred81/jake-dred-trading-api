@@ -1,0 +1,3 @@
+ticker,entry,stop,target,exit,score,pattern,strategy,outcome,size
+TSLA,170,160,190,185,8,Breakout,Bull Call Spread,Closed,1
+AAPL,150,145,165,155,7,Pullback,Risk Reversal,Closed,1

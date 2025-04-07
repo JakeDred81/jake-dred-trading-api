@@ -1,0 +1,26 @@
+📝 Weekly Trade Summary (Last 7 Days)
+=====================================
+
+[2025-04-07] TSLA Long @ 170 → Stop 160 / Target 190 / Score 8
+Pattern: Breakout / Strategy: Bull Call Spread / Outcome: Open
+[2025-04-07] TSLA Long @ 170 → Stop 160 / Target 190 / Score 8
+Pattern: Breakout / Strategy: Bull Call Spread / Outcome: Open
+
+[2025-04-07] FAZ Long @ 15000.0 → Stop 62.0 / Target 10000000.0 / Score 8
+Pattern: breakout / Strategy: bull call / Outcome: open
+
+[2025-04-07] TSLA – Closed: Win / Exited @ 185
+
+[2025-04-07] TSLA – Closed: Win / Exit @ 185
+
+
+📈 Performance Log
+=====================================
+
+Trades This Week: 5 (3 Wins / 2 Losses)
+Win Rate: 60%
+Average Score: 6.8
+Equity Curve: ↑
+Risk/Reward: 1.7:1
+[2025-04-07] TSLA – Win | Entry: 170 → Exit: 185 | P/L: $15 (8.82%) | R:R: 2.0
+[2025-04-07] TSLA – Win | Entry: 170 → Exit: 185 | P/L: $15 (8.82%) | R:R: 2.0
