@@ -17,13 +17,24 @@ def home():
 @app.route("/scan", methods=["GET", "POST"])
 def scan():
     ticker = request.args.get("ticker")
-    if not ticker:
-        return jsonify({"error": "Ticker is required"}), 400
-    try:
-        result = evaluate_with_context(ticker.upper())
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    if ticker:
+        try:
+            result = evaluate_with_context(ticker.upper())
+            return jsonify(result)
+        except Exception as e:
+            return jsonify({"error": f"Failed to evaluate ticker '{ticker.upper()}': {str(e)}"}), 404
+    else:
+        try:
+            import io, sys
+            from run_scan import run_auto_scan as run_full_scan
+            buffer = io.StringIO()
+            sys.stdout = buffer
+            run_full_scan()
+            sys.stdout = sys.__stdout__
+            output = buffer.getvalue()
+            return jsonify({"scan_results": output})
+        except Exception as e:
+            return jsonify({"error": f"Market scan failed: {str(e)}"}), 500
 
 @app.route("/log_trade", methods=["POST"])
 def log_trade_api():
