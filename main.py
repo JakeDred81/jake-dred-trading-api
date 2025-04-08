@@ -1,12 +1,12 @@
 from flask import Flask, request, jsonify
 from tradingview_ta import TA_Handler, Interval, Exchange
-from datetime import datetime
 from trade_logger import log_trade
 from performance_tracker import log_performance
 from combined_trade_closer import close_and_log
 from dynamic_market_scanner import evaluate_with_context
 from strategy_optimizer import analyze as run_strategy_analysis
 from signal_trigger import run_signal_scan
+from run_scan import run_auto_scan
 
 app = Flask(__name__)
 
@@ -22,14 +22,15 @@ def scan():
             result = evaluate_with_context(ticker.upper())
             return jsonify(result)
         except Exception as e:
-            return jsonify({"error": f"Failed to evaluate ticker '{ticker.upper()}': {str(e)}"}), 404
+            return jsonify({
+                "error": f"Failed to evaluate ticker '{ticker.upper()}': {str(e)}"
+            }), 404
     else:
         try:
             import io, sys
-            from run_scan import run_full_scan
             buffer = io.StringIO()
             sys.stdout = buffer
-            run_full_scan()
+            run_auto_scan()
             sys.stdout = sys.__stdout__
             output = buffer.getvalue()
             return jsonify({"scan_results": output})
