@@ -26,7 +26,7 @@ def scan():
     else:
         try:
             import io, sys
-            from run_scan import run_auto_scan as run_full_scan
+            from run_scan import run_full_scan
             buffer = io.StringIO()
             sys.stdout = buffer
             run_full_scan()
