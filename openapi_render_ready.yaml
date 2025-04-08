@@ -1,0 +1,83 @@
+openapi: 3.0.0
+info:
+  title: Jake Dred Trading Assistant API
+  version: 1.0.0
+servers:
+  - url: https://jakedred-api.onrender.com
+paths:
+  /scan:
+    get:
+      summary: Scan a specific ticker for a setup
+      operationId: scanTicker
+      parameters:
+        - name: ticker
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Scan result for the ticker
+        '404':
+          description: Ticker not found or error during scan
+    post:
+      summary: Run a full market scan
+      operationId: scanMarket
+      responses:
+        '200':
+          description: Full market scan results
+        '500':
+          description: Market scan failed
+  /log_trade:
+    post:
+      summary: Log a trade
+      operationId: logTrade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Trade logged successfully
+  /close_trade:
+    post:
+      summary: Close a trade and log performance
+      operationId: closeTrade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Trade closed and performance logged
+  /log_performance:
+    post:
+      summary: Log performance of a trade
+      operationId: logPerformance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Performance logged
+  /strategy_review:
+    get:
+      summary: Run strategy review analysis
+      operationId: strategyReview
+      responses:
+        '200':
+          description: Strategy review results
+  /signals:
+    get:
+      summary: Run signal scan
+      operationId: runSignalScan
+      responses:
+        '200':
+          description: Signal scan results
