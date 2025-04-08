@@ -14,7 +14,7 @@ app = Flask(__name__)
 def home():
     return "✅ Jake Dred Trading Assistant API is Live."
 
-@app.route("/scan", methods=["GET"])
+@app.route("/scan", methods=["GET", "POST"])
 def scan():
     ticker = request.args.get("ticker")
     if not ticker:
