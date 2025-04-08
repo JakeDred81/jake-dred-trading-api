@@ -1,6 +1,6 @@
 from dynamic_market_scanner import evaluate_with_context
 
-def run_full_scan():
+def run_auto_scan():
     tickers = ["TSLA", "AAPL", "NVDA", "AMD", "QQQ", "MSFT"]
     print("🚀 Running full market scan...\n")
     for ticker in tickers:
