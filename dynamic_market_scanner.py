@@ -1,29 +1,3 @@
-# dynamic_market_scanner.py (fully upgraded)
-
-from tradingview_ta import TA_Handler, Interval, Exchange
-import yfinance as yf
-import pandas as pd
-
-# --- Candle Pattern Detector ---
-def detect_candle_pattern(df):
-    if len(df) < 3:
-        return "Insufficient data"
-    latest = df.iloc[-2]
-    prev = df.iloc[-3]
-
-    # Bullish Engulfing
-    if prev['Close'] < prev['Open'] and latest['Close'] > latest['Open']:
-        if latest['Open'] < prev['Close'] and latest['Close'] > prev['Open']:
-            return "Bullish Engulfing"
-
-    # Bearish Engulfing
-    if prev['Close'] > prev['Open'] and latest['Close'] < latest['Open']:
-        if latest['Open'] > prev['Close'] and latest['Close'] < prev['Open']:
-            return "Bearish Engulfing"
-
-    return "None"
-
-# --- Core Scanner Function ---
 def evaluate_with_context(ticker):
     try:
         handler = TA_Handler(
@@ -89,4 +63,15 @@ def evaluate_with_context(ticker):
         }
 
     except Exception as e:
-        return {"error": str(e)}
+        return {
+            "ticker": ticker,
+            "score": 0,
+            "recommendation": "ERROR",
+            "pattern": "None",
+            "catalyst": "Error",
+            "candle_pattern": "Error",
+            "indicators": {},
+            "breakdown": {},
+            "playbook": {},
+            "error": str(e)
+        }
