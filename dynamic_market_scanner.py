@@ -26,16 +26,9 @@ def evaluate_with_context(ticker):
         df = yf.download(ticker, period="30d", interval="1d", auto_adjust=True)
 
         if df is None or df.empty:
-            return {
-                "ticker": ticker,
-                "score": 0,
-                "recommendation": "ERROR",
-                "pattern": "None",
-                "breakdown": {},
-                "catalyst": "Data fetch failed"
-            }
+            raise ValueError("No data returned by yfinance")
 
-        # Indicators
+        # Technical calculations...
         df['SMA20'] = df['Close'].rolling(window=20).mean()
         df['SMA50'] = df['Close'].rolling(window=50).mean()
         df['MACD'] = df['Close'].ewm(span=12).mean() - df['Close'].ewm(span=26).mean()
@@ -59,16 +52,6 @@ def evaluate_with_context(ticker):
 
         score = sum(breakdown.values())
 
-        playbook = {
-            "entry": "Breakout above recent high with volume",
-            "stop": "Below SMA20 or prior swing low",
-            "target": "Run to prior high or Fibonacci extension",
-            "options": {
-                "conservative": "Bull call spread, 30DTE",
-                "aggressive": "Long call, 0.40 Delta, 7-14DTE"
-            }
-        }
-
         return {
             "ticker": ticker,
             "score": score,
@@ -84,10 +67,19 @@ def evaluate_with_context(ticker):
                 "Volume": int(latest['Volume'])
             },
             "breakdown": breakdown,
-            "playbook": playbook
+            "playbook": {
+                "entry": "Breakout above recent high with volume",
+                "stop": "Below SMA20 or prior swing low",
+                "target": "Run to prior high or Fibonacci extension",
+                "options": {
+                    "conservative": "Bull call spread, 30DTE",
+                    "aggressive": "Long call, 0.40 Delta, 7-14DTE"
+                }
+            }
         }
 
     except Exception as e:
+        print(f"❌ Exception for {ticker}: {e}")
         return {
             "ticker": ticker,
             "score": 0,
