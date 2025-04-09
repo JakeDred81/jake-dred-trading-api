@@ -2,29 +2,27 @@
 
 from flask import Flask, request, jsonify
 from run_scan import run_auto_scan
-from scanner_output_parser import format_scan_result
 
 app = Flask(__name__)
 
 @app.route("/")
-def health_check():
-    return "Jake Dred's Trading API is live! 🔥"
+def health():
+    return "Jake Dred's Trading API is online."
 
 @app.route("/scan", methods=["POST"])
 def scan():
     try:
-        data = request.get_json()
-        scan_results = run_auto_scan()
-        formatted = [format_scan_result(s) for s in scan_results]
-        return jsonify({"results": formatted})
+        results = run_auto_scan()
+        return jsonify(results), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route("/signals", methods=["GET"])
-def get_signals():
+def signals():
     try:
-        scan_results = run_auto_scan()
-        return jsonify(scan_results)
+        results = run_auto_scan()
+        strong_setups = [r for r in results if r["recommendation"] == "STRONG"]
+        return jsonify(strong_setups), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
