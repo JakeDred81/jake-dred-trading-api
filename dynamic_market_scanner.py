@@ -1,4 +1,4 @@
-# dynamic_market_scanner.py (Series fix + candle pattern + debug logging + column flattening)
+# dynamic_market_scanner.py (Final Patch - flatten fix and clean Series access)
 
 import yfinance as yf
 import pandas as pd
@@ -19,12 +19,10 @@ def detect_candle_pattern(df):
     except Exception as e:
         return f"Error: {e}"
 
-    # Bullish Engulfing
     if (prev_close < prev_open and latest_close > latest_open and
         latest_open < prev_close and latest_close > prev_open):
         return "Bullish Engulfing"
 
-    # Bearish Engulfing
     if (prev_close > prev_open and latest_close < latest_open and
         latest_open > prev_close and latest_close < prev_open):
         return "Bearish Engulfing"
@@ -36,31 +34,32 @@ def evaluate_with_context(ticker):
     try:
         df = yf.download(ticker, period="5d", interval="1d", auto_adjust=False)
 
-        # If multi-indexed (due to multiple tickers or metadata), flatten it
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.droplevel(0)
+        # Flatten MultiIndex columns by forcing OHLCV mapping
+        df.columns = ["Adj Close", "Close", "High", "Low", "Open", "Volume"]
 
-        print(f"📊 Raw data for {ticker}:")
-        print(df.tail())
+        print(f"\n📊 Raw data for {ticker}:\n{df.tail()}")
 
         if df.empty or df.isnull().values.any():
             raise ValueError(f"No valid data for {ticker} — DataFrame is empty or has NaNs")
 
+        # Detect pattern
         candle = detect_candle_pattern(df)
 
-        sma20 = df['Close'].rolling(window=20).mean().iloc[-1] if len(df) >= 20 else df['Close'].mean()
-        sma50 = df['Close'].rolling(window=50).mean().iloc[-1] if len(df) >= 50 else df['Close'].mean()
-        rsi = 50  # Placeholder for future calc
-        volume = df['Volume'].iloc[-1]
-        avgvol = df['Volume'].mean()
+        close_prices = df['Close']
+        volume_series = df['Volume']
 
-        macd = df['Close'].ewm(span=12).mean() - df['Close'].ewm(span=26).mean()
+        sma20 = close_prices.rolling(window=20).mean().iloc[-1] if len(df) >= 20 else close_prices.mean()
+        sma50 = close_prices.rolling(window=50).mean().iloc[-1] if len(df) >= 50 else close_prices.mean()
+        rsi = 50  # Placeholder
+        volume = volume_series.iloc[-1]
+        avgvol = volume_series.mean()
+
+        macd = close_prices.ewm(span=12).mean() - close_prices.ewm(span=26).mean()
         macd_signal = macd.ewm(span=9).mean()
         macd_trend = "Bullish crossover" if macd.iloc[-1] > macd_signal.iloc[-1] else "Bearish crossover"
 
         trend_type = "Uptrend" if sma20 > sma50 else "Downtrend"
         catalyst = "Volume spike" if volume > 1.3 * avgvol else "None"
-
         rec = "BUY" if trend_type == "Uptrend" and macd_trend == "Bullish crossover" else "NEUTRAL"
 
         breakdown = {
