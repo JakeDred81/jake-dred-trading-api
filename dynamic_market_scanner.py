@@ -1,4 +1,4 @@
-# dynamic_market_scanner.py (patched with Series fix)
+# dynamic_market_scanner.py (patched with Series fix + auto_adjust override + debug logging)
 
 import yfinance as yf
 import pandas as pd
@@ -31,9 +31,11 @@ def detect_candle_pattern(df):
 # --- Core Scanner Function ---
 def evaluate_with_context(ticker):
     try:
-        df = yf.download(ticker, period="5d", interval="1d")
-        if df.empty:
-            return {"ticker": ticker, "score": 0, "recommendation": "ERROR", "pattern": "None", "breakdown": {}}
+        df = yf.download(ticker, period="5d", interval="1d", auto_adjust=False)
+        print(f"📊 Raw data for {ticker}:\n{df.tail()}")  # Debug output
+
+        if df.empty or df.isnull().values.any():
+            raise ValueError(f"No valid data for {ticker} — DataFrame is empty or has NaNs")
 
         candle = detect_candle_pattern(df)
 
