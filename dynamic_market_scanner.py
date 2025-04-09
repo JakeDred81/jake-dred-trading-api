@@ -1,13 +1,14 @@
-# dynamic_market_scanner.py
+# dynamic_market_scanner.py — Clean Rewrite w/ YFinance Only
 
 import yfinance as yf
 import pandas as pd
 
+# --- Candle Pattern Detection ---
 def detect_candle_pattern(df):
     if len(df) < 3:
         return "Insufficient data"
 
-    latest = df.iloc[-2]
+    latest = df.iloc[-2]  # yesterday's candle
     prev = df.iloc[-3]
 
     prev_open = float(prev['Open'])
@@ -25,35 +26,33 @@ def detect_candle_pattern(df):
 
     return "None"
 
+# --- Core Evaluation Scanner ---
 def evaluate_with_context(ticker):
     try:
-        df = yf.download(ticker, period="5d", interval="1d", auto_adjust=False)
-        print(f"📊 Raw data for {ticker}:\n{df.tail()}")
+        df = yf.download(ticker, period="5d", interval="1d", auto_adjust=True)
+        print(f"\n📊 Raw data for {ticker}:\n{df.tail()}\n")
 
         if df.empty or df.isnull().values.any():
-            raise ValueError(f"No valid data for {ticker} — DataFrame is empty or has NaNs")
+            raise ValueError(f"No valid data for {ticker}")
 
         candle = detect_candle_pattern(df)
-        close = df['Close']
+
+        sma20 = df['Close'].rolling(window=20).mean().iloc[-1] if len(df) >= 20 else df['Close'].mean()
+        sma50 = df['Close'].rolling(window=50).mean().iloc[-1] if len(df) >= 50 else df['Close'].mean()
         volume = df['Volume'].iloc[-1]
         avgvol = df['Volume'].mean()
 
-        # Indicators
-        sma20 = close.rolling(window=20).mean().iloc[-1] if len(close) >= 20 else close.mean()
-        sma50 = close.rolling(window=50).mean().iloc[-1] if len(close) >= 50 else close.mean()
-
-        macd_line = close.ewm(span=12).mean() - close.ewm(span=26).mean()
-        macd_signal = macd_line.ewm(span=9).mean()
-        macd_trend = "Bullish crossover" if macd_line.iloc[-1] > macd_signal.iloc[-1] else "Bearish crossover"
-
-        trend_type = "Uptrend" if sma20 > sma50 else "Downtrend"
+        macd = df['Close'].ewm(span=12).mean() - df['Close'].ewm(span=26).mean()
+        macd_signal = macd.ewm(span=9).mean()
+        macd_trend = "Bullish crossover" if macd.iloc[-1] > macd_signal.iloc[-1] else "Bearish crossover"
+        trend = "Uptrend" if sma20 > sma50 else "Downtrend"
         catalyst = "Volume spike" if volume > 1.3 * avgvol else "None"
 
-        recommendation = "BUY" if trend_type == "Uptrend" and macd_trend == "Bullish crossover" else "NEUTRAL"
+        rec = "BUY" if trend == "Uptrend" and macd_trend == "Bullish crossover" else "NEUTRAL"
 
         breakdown = {
-            "Technical Pattern": 2 if recommendation == "BUY" else 1,
-            "Trend & Momentum": 2 if trend_type == "Uptrend" else 1,
+            "Technical Pattern": 2 if rec == "BUY" else 1,
+            "Trend & Momentum": 2 if trend == "Uptrend" else 1,
             "News/Catalyst": 2 if catalyst != "None" else 1,
             "Fundamentals": 1,
             "Risk/Reward Profile": 1
@@ -61,40 +60,40 @@ def evaluate_with_context(ticker):
 
         score = sum(breakdown.values())
 
-        return {
-            "ticker": ticker,
-            "score": score,
-            "recommendation": recommendation,
-            "pattern": recommendation.title(),
-            "catalyst": catalyst,
-            "candle_pattern": candle,
-            "indicators": {
-                "RSI": 50,
-                "MACD": macd_trend,
-                "SMA20_vs_SMA50": trend_type,
-                "Volume": f"{volume:,} vs {avgvol:,.0f}"
-            },
-            "breakdown": breakdown,
-            "playbook": {
-                "entry": "Breakout entry above resistance with volume confirmation",
-                "stop": "Place below breakout base or prior pivot",
-                "target": "Run to measured move or recent high",
-                "options": {
-                    "conservative": "Vertical bull call spread",
-                    "aggressive": "Long call with delta 0.40+ and 2-3 week expiry"
-                }
+        playbook = {
+            "entry": "Bounce or breakout above resistance",
+            "stop": "Below support or MA base",
+            "target": "Run to previous high or measured move",
+            "options": {
+                "conservative": "Vertical spread — Buy 0.40 delta call, sell 0.25 delta call",
+                "aggressive": "Long call (0.45+ delta, 2-4 weeks out)"
             }
         }
 
+        return {
+            "ticker": ticker,
+            "score": score,
+            "recommendation": rec,
+            "pattern": rec.title(),
+            "catalyst": catalyst,
+            "candle_pattern": candle,
+            "indicators": {
+                "MACD": macd_trend,
+                "Trend": trend,
+                "SMA20 vs SMA50": f"{sma20:.2f} vs {sma50:.2f}",
+                "Volume": f"{volume:,} vs avg {avgvol:,.0f}"
+            },
+            "breakdown": breakdown,
+            "playbook": playbook
+        }
+
     except Exception as e:
+        print(f"❌ Exception for {ticker}: {e}")
         return {
             "ticker": ticker,
             "score": 0,
             "recommendation": "ERROR",
             "pattern": "None",
             "breakdown": {},
-            "candle_pattern": "None",
-            "indicators": {},
-            "playbook": {},
-            "error_msg": str(e)
+            "error": str(e)
         }
