@@ -1,5 +1,6 @@
 flask
 gunicorn==23.0.0
 tradingview-ta
-yfinance
+yfinance==0.2.55
 matplotlib
+flasgger==0.9.7.1
