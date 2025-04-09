@@ -1,104 +1,85 @@
+# dynamic_market_scanner.py (YFinance-Only Rewrite)
+
 import yfinance as yf
 import pandas as pd
 
-def evaluate_with_context(ticker):
-    try:
-        df = yf.download(ticker, period="6mo", interval="1d", progress=False)
-        if df.empty or len(df) < 50:
-            return {
-                "ticker": ticker,
-                "score": 0,
-                "recommendation": "ERROR",
-                "pattern": "None",
-                "breakdown": {},
-                "error": "Insufficient data"
-            }
-
-        df["SMA20"] = df["Close"].rolling(window=20).mean()
-        df["SMA50"] = df["Close"].rolling(window=50).mean()
-        df["RSI"] = compute_rsi(df["Close"])
-        df["MACD"], df["MACD_signal"] = compute_macd(df["Close"])
-        volume_spike = df["Volume"].iloc[-1] > df["Volume"].rolling(window=20).mean().iloc[-1] * 1.5
-
-        trend = "Uptrend" if df["SMA20"].iloc[-1] > df["SMA50"].iloc[-1] else "Downtrend"
-        macd_cross = "Bullish crossover" if df["MACD"].iloc[-1] > df["MACD_signal"].iloc[-1] else "Bearish crossover"
-        candle = detect_candle_pattern(df)
-
-        breakdown = {
-            "Technical Pattern": 2 if trend == "Uptrend" and macd_cross == "Bullish crossover" else 1,
-            "Trend & Momentum": 2 if df["RSI"].iloc[-1] > 50 else 1,
-            "News/Catalyst": 2 if volume_spike else 1,
-            "Fundamentals": 1,  # Placeholder
-            "Risk/Reward Profile": 1  # Placeholder
-        }
-
-        score = sum(breakdown.values())
-
-        playbook = {
-            "entry": "Enter on bullish confirmation near support or breakout level",
-            "stop": "Place below recent swing low or support",
-            "target": "Run to recent high or resistance",
-            "options": {
-                "conservative": "Debit call spread (0.30-0.40 delta)",
-                "aggressive": "Long call (0.45+ delta, 2-4 week expiry)"
-            }
-        }
-
-        return {
-            "ticker": ticker,
-            "score": score,
-            "recommendation": "BUY" if score >= 7 else "NEUTRAL",
-            "pattern": trend,
-            "catalyst": "Volume spike" if volume_spike else "None",
-            "candle_pattern": candle,
-            "indicators": {
-                "RSI": round(df["RSI"].iloc[-1], 2),
-                "MACD": macd_cross,
-                "SMA20": round(df["SMA20"].iloc[-1], 2),
-                "SMA50": round(df["SMA50"].iloc[-1], 2),
-                "Volume": int(df["Volume"].iloc[-1])
-            },
-            "breakdown": breakdown,
-            "playbook": playbook
-        }
-
-    except Exception as e:
-        return {
-            "ticker": ticker,
-            "score": 0,
-            "recommendation": "ERROR",
-            "pattern": "None",
-            "breakdown": {},
-            "error": str(e)
-        }
-
-# --- SUPPORT FUNCTIONS ---
-def compute_rsi(series, period=14):
-    delta = series.diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-    rs = gain / loss
-    return 100 - (100 / (1 + rs))
-
-def compute_macd(series, fast=12, slow=26, signal=9):
-    exp1 = series.ewm(span=fast, adjust=False).mean()
-    exp2 = series.ewm(span=slow, adjust=False).mean()
-    macd = exp1 - exp2
-    signal_line = macd.ewm(span=signal, adjust=False).mean()
-    return macd, signal_line
-
+# --- Candle Pattern Detector ---
 def detect_candle_pattern(df):
     if len(df) < 3:
         return "Insufficient data"
     latest = df.iloc[-2]
     prev = df.iloc[-3]
 
-    if prev["Close"] < prev["Open"] and latest["Close"] > latest["Open"]:
-        if latest["Open"] < prev["Close"] and latest["Close"] > prev["Open"]:
+    # Bullish Engulfing
+    if prev['Close'] < prev['Open'] and latest['Close'] > latest['Open']:
+        if latest['Open'] < prev['Close'] and latest['Close'] > prev['Open']:
             return "Bullish Engulfing"
 
-    if prev["Close"] > prev["Open"] and latest["Close"] < latest["Open"]:
-        if latest["Open"] > prev["Close"] and latest["Close"] < prev["Open"]:
+    # Bearish Engulfing
+    if prev['Close'] > prev['Open'] and latest['Close'] < latest['Open']:
+        if latest['Open'] > prev['Close'] and latest['Close'] < prev['Open']:
             return "Bearish Engulfing"
 
     return "None"
+
+# --- Core Scanner Function ---
+def evaluate_with_context(ticker):
+    try:
+        df = yf.download(ticker, period="10d", interval="1d", auto_adjust=False)
+        if df.empty or len(df) < 5:
+            return {"ticker": ticker, "score": 0, "recommendation": "ERROR", "pattern": "None", "breakdown": {}, "error": "No data"}
+
+        # Indicators
+        df['SMA20'] = df['Close'].rolling(window=20).mean()
+        df['SMA50'] = df['Close'].rolling(window=50).mean()
+        df['RSI'] = 100 - (100 / (1 + df['Close'].pct_change().add(1).rolling(window=14).mean()))
+
+        candle = detect_candle_pattern(df)
+        volume = df['Volume'].iloc[-1]
+        avgvol = df['Volume'].rolling(5).mean().iloc[-1]
+        sma20 = df['SMA20'].iloc[-1]
+        sma50 = df['SMA50'].iloc[-1]
+
+        trend_type = "Uptrend" if sma20 > sma50 else "Downtrend"
+        catalyst = "Volume spike" if volume > 1.3 * avgvol else "None"
+
+        breakdown = {
+            "Trend & Momentum": 2 if trend_type == "Uptrend" else 1,
+            "Volume Catalyst": 2 if catalyst != "None" else 1,
+            "Candle Pattern": 2 if candle in ["Bullish Engulfing", "Bearish Engulfing"] else 1,
+            "Fundamentals": 1,
+            "Risk/Reward Profile": 1
+        }
+
+        score = sum(breakdown.values())
+        recommendation = "BUY" if score >= 8 else ("NEUTRAL" if score >= 5 else "AVOID")
+
+        playbook = {
+            "entry": "Breakout entry above resistance with volume confirmation",
+            "stop": "Place below breakout base or prior pivot",
+            "target": "Run to measured move or recent high",
+            "options": {
+                "conservative": "Vertical bull call spread",
+                "aggressive": "Long call with delta 0.40+ and 2-3 week expiry"
+            }
+        }
+
+        return {
+            "ticker": ticker,
+            "score": score,
+            "recommendation": recommendation,
+            "pattern": trend_type,
+            "catalyst": catalyst,
+            "candle_pattern": candle,
+            "indicators": {
+                "SMA20": round(sma20, 2),
+                "SMA50": round(sma50, 2),
+                "RSI": round(df['RSI'].iloc[-1], 2),
+                "Volume": f"{volume:,} vs {int(avgvol):,}"
+            },
+            "breakdown": breakdown,
+            "playbook": playbook
+        }
+
+    except Exception as e:
+        return {"ticker": ticker, "score": 0, "recommendation": "ERROR", "pattern": "None", "breakdown": {}, "error": str(e)}
