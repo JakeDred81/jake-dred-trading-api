@@ -2,6 +2,7 @@
 
 from flask import Flask, jsonify
 from run_scan import run_auto_scan
+from yahoo_screener import get_top_volume_tickers
 
 app = Flask(__name__)
 
@@ -16,7 +17,9 @@ def scan():
 @app.route("/autoscan", methods=["GET"])
 def autoscan():
     try:
-        results = run_auto_scan()
+        # Dynamically pull top tickers
+        tickers = get_top_volume_tickers(min_price=10, min_volume=1_000_000, limit=20)
+        results = run_auto_scan(tickers=tickers)
         return jsonify({"status": "success", "results": results})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
