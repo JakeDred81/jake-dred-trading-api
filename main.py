@@ -1,113 +1,22 @@
-from flask import Flask, request, jsonify
-from tradingview_ta import TA_Handler, Interval, Exchange
-from trade_logger import log_trade
-from performance_tracker import log_performance
-from combined_trade_closer import close_and_log
+# main.py — Flask API for Trading Scanner (fixed version)
+
+from flask import Flask, jsonify
 from dynamic_market_scanner import evaluate_with_context
-from strategy_optimizer import analyze as run_strategy_analysis
-from signal_trigger import run_signal_scan
-from run_scan import run_auto_scan
 
 app = Flask(__name__)
 
-@app.route("/")
-def home():
-    return "✅ Jake Dred Trading Assistant API is Live."
-
-@app.route("/scan", methods=["GET", "POST"])
+@app.route("/scan", methods=["POST"])
 def scan():
-    ticker = request.args.get("ticker")
-    if ticker:
-        try:
-            result = evaluate_with_context(ticker.upper())
-            return jsonify(result)
-        except Exception as e:
-            return jsonify({
-                "error": f"Failed to evaluate ticker '{ticker.upper()}': {str(e)}"
-            }), 404
-    else:
-        try:
-            import io, sys
-            buffer = io.StringIO()
-            sys.stdout = buffer
-            run_auto_scan()
-            sys.stdout = sys.__stdout__
-            output = buffer.getvalue()
-            return jsonify({"scan_results": output})
-        except Exception as e:
-            return jsonify({"error": f"Market scan failed: {str(e)}"}), 500
+    tickers = ["TSLA", "AAPL", "NVDA", "AMD", "QQQ", "MSFT"]
+    results = []
 
-@app.route("/log_trade", methods=["POST"])
-def log_trade_api():
-    data = request.json
-    try:
-        log_trade(
-            data["ticker"],
-            float(data["entry"]),
-            float(data["stop"]),
-            float(data["target"]),
-            int(data["score"]),
-            data["pattern"],
-            data["strategy"],
-            data.get("outcome", "Open")
-        )
-        return jsonify({"message": "✅ Trade logged"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    print("🚀 Running full market scan...\n")
 
-@app.route("/close_trade", methods=["POST"])
-def close_trade_api():
-    data = request.json
-    try:
-        close_and_log(
-            data["ticker"],
-            float(data["entry"]),
-            float(data["exit"]),
-            float(data["stop"]),
-            float(data["target"]),
-            float(data.get("size", 1))
-        )
-        return jsonify({"message": "✅ Trade closed and performance logged"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    for ticker in tickers:
+        result = evaluate_with_context(ticker)
+        results.append(result)
 
-@app.route("/log_performance", methods=["POST"])
-def log_performance_api():
-    data = request.json
-    try:
-        log_performance(
-            data["ticker"],
-            float(data["entry"]),
-            float(data["exit"]),
-            float(data["stop"]),
-            float(data["target"]),
-            float(data.get("size", 1))
-        )
-        return jsonify({"message": "📈 Performance logged"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/strategy_review", methods=["GET"])
-def strategy_review():
-    try:
-        import io
-        import sys
-        buffer = io.StringIO()
-        sys.stdout = buffer
-        run_strategy_analysis()
-        sys.stdout = sys.__stdout__
-        output = buffer.getvalue()
-        return jsonify({"strategy_review": output})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/signals", methods=["GET"])
-def signal_check():
-    try:
-        run_signal_scan()
-        return jsonify({"message": "📡 Signal scan completed."})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify(scan_results=results)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)
