@@ -1,40 +1,55 @@
-# run_scan.py
+import yfinance as yf
+from tradingview_ta import TA_Handler, Interval
+from datetime import datetime, timedelta
 
-from dynamic_market_scanner import evaluate_with_context
+def analyze_ticker(ticker):
+    data = yf.download(ticker, period="5d", interval="1d")
+    if data.empty or len(data) < 5:
+        return None
 
-tickers = ["TSLA", "AAPL", "NVDA", "AMD", "QQQ", "MSFT"]
+    recent = data.iloc[-1]
+    avg_volume = data['Volume'].mean()
 
-print("🚀 Running full market scan...\n")
+    analysis = {
+        "ticker": ticker,
+        "indicators": {
+            "RSI": 50,  # Placeholder until logic is added
+            "MACD": "Bearish crossover",  # Placeholder
+            "SMA20_vs_SMA50": "Downtrend",  # Placeholder
+            "Volume": f"{recent['Volume']:,} vs {avg_volume:,.1f}"
+        },
+        "pattern": "Neutral",
+        "catalyst": "None",
+        "candle_pattern": "None",
+        "score": 5,
+        "recommendation": "NEUTRAL",
+        "breakdown": {
+            "Technical Pattern": 1,
+            "Trend & Momentum": 1,
+            "News/Catalyst": 1,
+            "Fundamentals": 1,
+            "Risk/Reward Profile": 1
+        },
+        "playbook": {
+            "entry": "Breakout entry above resistance with volume confirmation",
+            "stop": "Place below breakout base or prior pivot",
+            "target": "Run to measured move or recent high",
+            "options": {
+                "conservative": "Vertical bull call spread",
+                "aggressive": "Long call with delta 0.40+ and 2-3 week expiry"
+            }
+        }
+    }
 
-for ticker in tickers:
-    result = evaluate_with_context(ticker)
-    
-    print(f"📊 {ticker}")
-    print(f"Score: {result['score']}")
-    print(f"Recommendation: {result['recommendation']}")
-    print(f"Pattern: {result.get('pattern', 'None')}")
-    print(f"Catalyst: {result.get('catalyst', 'None')}")
-    print(f"Candle Pattern: {result.get('candle_pattern', 'None')}")
-    
-    print("Indicators:")
-    for k, v in result.get("indicators", {}).items():
-        print(f"  - {k}: {v}")
+    return analysis
 
-    print("Breakdown:")
-    for k, v in result.get("breakdown", {}).items():
-        print(f"  - {k}: {v}")
-    
-    print("Playbook:")
-    playbook = result.get("playbook", {})
-    if isinstance(playbook, dict):
-        print(f"  - Entry: {playbook.get('entry', 'N/A')}")
-        print(f"  - Stop: {playbook.get('stop', 'N/A')}")
-        print(f"  - Target: {playbook.get('target', 'N/A')}")
-        print("  - Options:")
-        for style, strat in playbook.get("options", {}).items():
-            print(f"     • {style.capitalize()}: {strat}")
-    
-    if "error" in result:
-        print(f"⚠️ Error: {result['error']}")
-    
-    print("\n" + "-"*50 + "\n")
+def run_auto_scan():
+    tickers = ["TSLA", "AAPL", "NVDA", "AMD", "QQQ", "MSFT"]
+    results = []
+
+    for ticker in tickers:
+        result = analyze_ticker(ticker)
+        if result:
+            results.append(result)
+
+    return results
