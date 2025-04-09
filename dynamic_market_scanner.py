@@ -1,69 +1,62 @@
+import yfinance as yf
+import pandas as pd
+
 def evaluate_with_context(ticker):
     try:
-        handler = TA_Handler(
-            symbol=ticker,
-            screener="america",
-            exchange="NASDAQ",
-            interval=Interval.INTERVAL_1_DAY
-        )
-        analysis = handler.get_analysis()
+        df = yf.download(ticker, period="6mo", interval="1d", progress=False)
+        if df.empty or len(df) < 50:
+            return {
+                "ticker": ticker,
+                "score": 0,
+                "recommendation": "ERROR",
+                "pattern": "None",
+                "breakdown": {},
+                "error": "Insufficient data"
+            }
 
-        df = yf.download(ticker, period="5d", interval="1d", auto_adjust=False)
-        if df is None or df.empty:
-            raise ValueError(f"No price data found for {ticker}")
+        df["SMA20"] = df["Close"].rolling(window=20).mean()
+        df["SMA50"] = df["Close"].rolling(window=50).mean()
+        df["RSI"] = compute_rsi(df["Close"])
+        df["MACD"], df["MACD_signal"] = compute_macd(df["Close"])
+        volume_spike = df["Volume"].iloc[-1] > df["Volume"].rolling(window=20).mean().iloc[-1] * 1.5
 
+        trend = "Uptrend" if df["SMA20"].iloc[-1] > df["SMA50"].iloc[-1] else "Downtrend"
+        macd_cross = "Bullish crossover" if df["MACD"].iloc[-1] > df["MACD_signal"].iloc[-1] else "Bearish crossover"
         candle = detect_candle_pattern(df)
 
-        summary = analysis.summary or {}
-        indicators = analysis.indicators or {}
-        rec = summary.get("RECOMMENDATION", "ERROR")
-
-        if rec == "ERROR":
-            raise ValueError(f"TradingView returned ERROR for {ticker}")
-
-        rsi = indicators.get("RSI", 0)
-        macd = indicators.get("MACD.macd", 0)
-        macd_signal = indicators.get("MACD.signal", 0)
-        sma20 = indicators.get("SMA20", 0)
-        sma50 = indicators.get("SMA50", 0)
-        volume = indicators.get("volume", 0)
-        avgvol = indicators.get("avgvol", 1)
-
-        macd_trend = "Bullish crossover" if macd > macd_signal else "Bearish crossover"
-        trend_type = "Uptrend" if sma20 > sma50 else "Downtrend"
-        catalyst = "Volume spike" if volume > 1.3 * avgvol else "None"
-
         breakdown = {
-            "Technical Pattern": 2 if rec in ["BUY", "STRONG_BUY"] else 1,
-            "Trend & Momentum": 2 if trend_type == "Uptrend" else 1,
-            "News/Catalyst": 2 if catalyst != "None" else 1,
-            "Fundamentals": 1,
-            "Risk/Reward Profile": 1
+            "Technical Pattern": 2 if trend == "Uptrend" and macd_cross == "Bullish crossover" else 1,
+            "Trend & Momentum": 2 if df["RSI"].iloc[-1] > 50 else 1,
+            "News/Catalyst": 2 if volume_spike else 1,
+            "Fundamentals": 1,  # Placeholder
+            "Risk/Reward Profile": 1  # Placeholder
         }
+
         score = sum(breakdown.values())
 
         playbook = {
-            "entry": "Breakout entry above resistance with volume confirmation",
-            "stop": "Place below breakout base or prior pivot",
-            "target": "Run to measured move or recent high",
+            "entry": "Enter on bullish confirmation near support or breakout level",
+            "stop": "Place below recent swing low or support",
+            "target": "Run to recent high or resistance",
             "options": {
-                "conservative": "Vertical bull call spread",
-                "aggressive": "Long call with delta 0.40+ and 2-3 week expiry"
+                "conservative": "Debit call spread (0.30-0.40 delta)",
+                "aggressive": "Long call (0.45+ delta, 2-4 week expiry)"
             }
         }
 
         return {
             "ticker": ticker,
             "score": score,
-            "recommendation": rec,
-            "pattern": rec.title(),
-            "catalyst": catalyst,
+            "recommendation": "BUY" if score >= 7 else "NEUTRAL",
+            "pattern": trend,
+            "catalyst": "Volume spike" if volume_spike else "None",
             "candle_pattern": candle,
             "indicators": {
-                "RSI": round(rsi, 2),
-                "MACD": macd_trend,
-                "SMA20_vs_SMA50": trend_type,
-                "Volume": f"{volume:,} vs {avgvol:,}"
+                "RSI": round(df["RSI"].iloc[-1], 2),
+                "MACD": macd_cross,
+                "SMA20": round(df["SMA20"].iloc[-1], 2),
+                "SMA50": round(df["SMA50"].iloc[-1], 2),
+                "Volume": int(df["Volume"].iloc[-1])
             },
             "breakdown": breakdown,
             "playbook": playbook
@@ -75,10 +68,37 @@ def evaluate_with_context(ticker):
             "score": 0,
             "recommendation": "ERROR",
             "pattern": "None",
-            "catalyst": "None",
-            "candle_pattern": "None",
-            "indicators": {},
             "breakdown": {},
-            "playbook": {},
             "error": str(e)
         }
+
+# --- SUPPORT FUNCTIONS ---
+def compute_rsi(series, period=14):
+    delta = series.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+    rs = gain / loss
+    return 100 - (100 / (1 + rs))
+
+def compute_macd(series, fast=12, slow=26, signal=9):
+    exp1 = series.ewm(span=fast, adjust=False).mean()
+    exp2 = series.ewm(span=slow, adjust=False).mean()
+    macd = exp1 - exp2
+    signal_line = macd.ewm(span=signal, adjust=False).mean()
+    return macd, signal_line
+
+def detect_candle_pattern(df):
+    if len(df) < 3:
+        return "Insufficient data"
+    latest = df.iloc[-2]
+    prev = df.iloc[-3]
+
+    if prev["Close"] < prev["Open"] and latest["Close"] > latest["Open"]:
+        if latest["Open"] < prev["Close"] and latest["Close"] > prev["Open"]:
+            return "Bullish Engulfing"
+
+    if prev["Close"] > prev["Open"] and latest["Close"] < latest["Open"]:
+        if latest["Open"] > prev["Close"] and latest["Close"] < prev["Open"]:
+            return "Bearish Engulfing"
+
+    return "None"
