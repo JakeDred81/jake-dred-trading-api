@@ -1,33 +1,54 @@
-# Module 5: Alerts & Triggers – Jake Dred’s Trading Toolbox
+import json
+import os
 
-from datetime import datetime
 
-alerts = []
+ALERTS_FILE = "alerts.json"
 
-def set_alert(alert_type, symbol=None, condition=None, notes=None):
-    alert = {
-        'Date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'Type': alert_type,
-        'Symbol': symbol.upper() if symbol else None,
-        'Condition': condition,
-        'Notes': notes
-    }
-    alerts.append(alert)
-    print(f"🔔 Alert set: {alert_type} for {symbol.upper() if symbol else 'General'} – {condition}")
+
+def load_alerts():
+    if not os.path.exists(ALERTS_FILE):
+        return []
+
+    with open(ALERTS_FILE, "r") as f:
+        try:
+            return json.load(f)
+        except json.JSONDecodeError:
+            return []
+
+
+def save_alerts(alerts):
+    with open(ALERTS_FILE, "w") as f:
+        json.dump(alerts, f, indent=4)
+
+
+def add_alert(symbol, condition, note=""):
+    alerts = load_alerts()
+    alerts.append({"symbol": symbol, "condition": condition, "note": note})
+    save_alerts(alerts)
+
+
+def remove_alert(symbol, condition):
+    alerts = load_alerts()
+    alerts = [a for a in alerts if not (a["symbol"] == symbol and a["condition"] == condition)]
+    save_alerts(alerts)
+
 
 def list_alerts():
-    if not alerts:
-        print("No alerts set.")
-        return
+    return load_alerts()
 
-    print("\n📡 Active Alerts:")
-    for a in alerts:
-        print(f"[{a['Date']}] {a['Type']} – {a['Symbol'] or 'General'}: {a['Condition']}")
-        if a['Notes']:
-            print(f"  Notes: {a['Notes']}")
-        print("---")
 
-# Example usage:
-# set_alert('Earnings', 'NVDA', 'Earnings report due May 20', 'Watch for volatility spike.')
-# set_alert('VIX Spike', None, 'VIX > 20', 'Scale back risk exposure.')
-# list_alerts()
+# NEW REQUIRED FUNCTION FOR run_scan.py
+def check_alerts(tickers):
+    alerts_triggered = []
+
+    alerts = load_alerts()
+
+    for alert in alerts:
+        if alert["symbol"] in tickers:
+            alerts_triggered.append({
+                "symbol": alert["symbol"],
+                "condition": alert["condition"],
+                "note": alert.get("note", "")
+            })
+
+    return alerts_triggered
