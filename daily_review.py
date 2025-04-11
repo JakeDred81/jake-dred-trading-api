@@ -1,64 +1,36 @@
-# Daily Review Commander – UTF-8 safe version
+# Module: Daily Review Workflow – Jake Dred’s Trading Toolbox
 
-from auto_scan_bridge import run_auto_scan
+from datetime import datetime, timedelta
 
-def run_journal_summary():
-    print("\n📓 Trade Journal Summary:")
-    try:
-        with open("trade_log.txt", "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            if not lines:
-                print("No trades logged yet.")
-            else:
-                print("".join(lines[-5:]))
-    except FileNotFoundError:
-        print("No journal file found.")
+def run_daily_review(journal, portfolio, alerts):
+    print("\n🧠 Jake Dred’s Daily Review –", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
-def run_portfolio_check():
-    print("\n💼 Portfolio Exposure Monitor:")
-    try:
-        with open("portfolio_log.txt", "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            if not lines:
-                print("No positions logged.")
-            else:
-                print("".join(lines))
-    except FileNotFoundError:
-        print("No portfolio log found.")
+    print("\n1. 📊 Market Scanner (Simulated)")
+    from market_scanner import run_market_scanner
+    run_market_scanner()
 
-def run_alerts_check():
-    print("\n🔔 Alerts Triggered:")
-    try:
-        with open("alerts_log.txt", "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            if not lines:
-                print("No alerts set.")
-            else:
-                print("".join(lines))
-    except FileNotFoundError:
-        print("No alert file found.")
+    print("\n2. 📝 Trade Journal Summary")
+    if not journal:
+        print("No trades logged.")
+    else:
+        for trade in journal[-5:]:  # show last 5 entries
+            print(f"[{trade['Date']}] {trade['Ticker']} – Entry: {trade['Entry']}, Score: {trade['Score']}, Result: {trade['Result'] or 'Open'}")
 
-def run_performance_dashboard():
-    print("\n📈 Performance Dashboard:")
-    try:
-        with open("performance_log.txt", "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            if not lines:
-                print("No performance data.")
-            else:
-                print("".join(lines[-10:]))
-    except FileNotFoundError:
-        print("No performance data found.")
+    print("\n3. 💼 Portfolio Exposure")
+    total_equity = 2000  # can be adjusted manually
+    from portfolio_exposure_monitor import portfolio_summary
+    portfolio_summary(total_equity)
 
-def run_daily_review():
-    print("🧠 Jake Dred's Daily Review – Live Tactical Feed")
-    print("===============================================")
-    run_auto_scan()
-    run_journal_summary()
-    run_portfolio_check()
-    run_alerts_check()
-    run_performance_dashboard()
-    print("===============================================")
-    print("Review Complete. Stay sharp, stay deadly.")
+    print("\n4. 🔔 Active Alerts")
+    if not alerts:
+        print("No alerts set.")
+    else:
+        for a in alerts:
+            print(f"[{a['Date']}] {a['Type']} – {a['Symbol'] or 'General'}: {a['Condition']}")
+            if a['Notes']:
+                print(f"  Notes: {a['Notes']}")
+            print("---")
 
-run_daily_review()
+    print("\n5. 📈 Performance Snapshot")
+    from performance_dashboard import generate_dashboard
+    generate_dashboard(journal)

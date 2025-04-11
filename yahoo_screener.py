@@ -1,25 +1,32 @@
-# yahoo_screener.py
-
+# Yahoo Screener Module – Pull Tickers Based on Liquidity & Price
 import yfinance as yf
 
-def get_top_volume_tickers(min_price=10, min_volume=1_000_000, limit=20):
-    tickers = ["AAPL", "TSLA", "NVDA", "AMD", "SPY", "QQQ", "AMZN", "GOOGL", "META", "MSFT"]
+def get_screened_tickers(min_price=10, min_volume=1_000_000, limit=10):
+    # Example large-cap tickers to screen (expandable)
+    universe = [
+        'AAPL', 'MSFT', 'TSLA', 'NVDA', 'GOOGL', 'AMZN', 'META', 'AMD',
+        'NFLX', 'INTC', 'BA', 'JPM', 'WMT', 'XOM', 'CVX', 'T', 'KO', 'PEP',
+        'DIS', 'PYPL', 'CRM', 'SNOW', 'UBER', 'LULU', 'SHOP', 'FDX', 'ORCL',
+        'MU', 'SPY', 'QQQ'
+    ]
+
     filtered = []
-
-    for ticker in tickers:
+    for symbol in universe:
         try:
-            data = yf.download(ticker, period="5d", interval="1d", progress=False)
-            if data.empty:
-                continue
-
-            latest = data.iloc[-1]
-            price = latest["Close"]
-            volume = latest["Volume"]
+            data = yf.Ticker(symbol).info
+            price = data.get('regularMarketPrice', 0)
+            volume = data.get('averageVolume', 0)
 
             if price >= min_price and volume >= min_volume:
-                filtered.append((ticker, volume))
-        except Exception:
+                filtered.append((symbol, price, volume))
+
+        except Exception as e:
             continue
 
-    sorted_tickers = sorted(filtered, key=lambda x: x[1], reverse=True)
-    return [t[0] for t in sorted_tickers[:limit]]
+    filtered.sort(key=lambda x: x[2], reverse=True)  # sort by volume
+    top_symbols = [sym[0] for sym in filtered[:limit]]
+
+    print(f"📈 Top {limit} tickers screened from Yahoo Finance:")
+    for sym, price, volume in filtered[:limit]:
+        print(f" - {sym} | Price: ${price:.2f} | Avg Vol: {volume:,}")
+    return top_symbols
