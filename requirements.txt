@@ -4,3 +4,4 @@ tradingview-ta
 yfinance==0.2.55
 matplotlib
 flasgger==0.9.7.1
+requests>=2.0.0
