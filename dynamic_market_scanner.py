@@ -1,12 +1,10 @@
 
-from trade_score_evaluator import score_trade
-from pattern_playbook import detect_patterns
-from data_handler import get_realtime_data  # New Import
+from src.trade_score_evaluator import score_trade
+from src.pattern_playbook import detect_patterns
+from src.data_handler import get_realtime_data
 
-# Tickers to scan
 tickers = ['SOXL', 'TQQQ', 'TSLA', 'NVDA', 'SPY', 'QQQ']
 
-# Pull real-time data using new data handler
 data = get_realtime_data(tickers)
 
 results = []
