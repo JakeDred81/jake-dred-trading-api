@@ -1,5 +1,5 @@
 
-from src.dynamic_market_scanner import evaluate_with_context
+from dynamic_market_scanner import evaluate_with_context
 
 def run_auto_scan():
     print("Running Auto Market Scan...")

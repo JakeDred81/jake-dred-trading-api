@@ -1,7 +1,7 @@
 
-from src.trade_score_evaluator import score_trade
-from src.pattern_playbook import detect_patterns
-from src.data_handler import get_realtime_data
+from trade_score_evaluator import score_trade
+from pattern_playbook import detect_patterns
+from data_handler import get_realtime_data
 
 tickers = ['SOXL', 'TQQQ', 'TSLA', 'NVDA', 'SPY', 'QQQ']
 

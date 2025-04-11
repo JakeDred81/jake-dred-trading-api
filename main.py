@@ -1,6 +1,6 @@
 
 from flask import Flask, jsonify
-from src.run_scan import run_auto_scan
+from run_scan import run_auto_scan
 
 app = Flask(__name__)
 
