@@ -1,8 +1,7 @@
 
-import yfinance as yf
-from trade_score_evaluator import score_trade
-from pattern_playbook import detect_patterns
-from data_handler import get_realtime_data  # New Import
+from .trade_score_evaluator import score_trade
+from .pattern_playbook import detect_patterns
+from .data_handler import get_realtime_data  # New Import
 
 # Tickers to scan
 tickers = ['SOXL', 'TQQQ', 'TSLA', 'NVDA', 'SPY', 'QQQ']
