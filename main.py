@@ -1,15 +1,21 @@
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from flask import Flask, jsonify
-from run_scan import run_auto_scan
+from flask import Flask, jsonify, request
+from run_scan import run_auto_scan, run_manual_scan
 
 app = Flask(__name__)
 
-@app.route('/autoscan', methods=['GET'])
-def autoscan():
-    run_auto_scan()
-    return jsonify({"status": "Auto scan completed"})
+@app.route('/')
+def home():
+    return 'Jake Dred API is Live'
 
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route('/scan/auto')
+def scan_auto():
+    results = run_auto_scan()
+    return jsonify(results)
+
+@app.route('/scan')
+def scan_manual():
+    ticker = request.args.get('ticker')
+    if not ticker:
+        return jsonify({'error': 'No ticker provided'}), 400
+    results = run_manual_scan(ticker)
+    return jsonify(results)
