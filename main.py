@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from run_scan import run_auto_scan, run_manual_scan
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -9,7 +10,6 @@ def home():
 
 @app.route('/healthz')
 def healthz():
-    # Simple health-check endpoint for keep-alive pings
     return "OK", 200
 
 @app.route('/scan')
@@ -20,7 +20,12 @@ def scan():
         score, breakdown = run_auto_scan(ticker, context)
     else:
         score, breakdown = run_manual_scan(ticker)
-    return jsonify({"ticker": ticker, "score": score, "breakdown": breakdown})
+    return jsonify({
+        "ticker": ticker,
+        "score": score,
+        "breakdown": breakdown,
+        "fetched_at": datetime.utcnow().isoformat() + "Z"
+    })
 
 if __name__ == "__main__":
     # For local development only; Render uses Gunicorn
