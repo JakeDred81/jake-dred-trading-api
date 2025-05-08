@@ -16,10 +16,20 @@ def healthz():
 def scan():
     ticker = request.args.get('ticker')
     context = request.args.get('context', None)
+
+    # Call the appropriate scan function
     if context:
-        score, breakdown = run_auto_scan(ticker, context)
+        result = run_auto_scan(ticker, context)
     else:
-        score, breakdown = run_manual_scan(ticker)
+        result = run_manual_scan(ticker)
+
+    # Safely unpack score and breakdown (ignore extra values)
+    try:
+        score, breakdown = result
+    except (ValueError, TypeError):
+        # result might include extra elements; grab first two
+        score, breakdown = result[0], result[1]
+
     return jsonify({
         "ticker": ticker,
         "score": score,
