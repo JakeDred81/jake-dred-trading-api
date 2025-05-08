@@ -1,0 +1,13 @@
+name: Keep API Alive
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # every 5 minutes
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping API healthz
+        run: |
+          curl -fsS https://jake-dred-trading-api.onrender.com/healthz || echo "Ping failed"
