@@ -16,32 +16,58 @@ def healthz():
 def scan():
     ticker = request.args.get('ticker')
     context = request.args.get('context', None)
-
-    # Execute the appropriate scan
+    
     if context:
         result = run_auto_scan(ticker, context)
-    else:
-        result = run_manual_scan(ticker)
-
-    # Parse out score & breakdown from result
-    if isinstance(result, dict):
-        score = result.get("score")
-        breakdown = result.get("breakdown")
-    else:
-        # Fallback for tuple/list results
+        # Ensure dict result
+        if isinstance(result, dict):
+            result["fetched_at"] = datetime.utcnow().isoformat() + "Z"
+            return jsonify(result)
+        # Fallback unpack tuple/list
         try:
             score, breakdown = result
+            return jsonify({
+                "ticker": ticker,
+                "score": score,
+                "breakdown": breakdown,
+                "fetched_at": datetime.utcnow().isoformat() + "Z"
+            })
         except Exception:
-            # Fallback: take first two elements
-            score = result[0]
-            breakdown = result[1]
+            return jsonify({"error": "Invalid scan result format"}), 500
+    else:
+        try:
+            score, breakdown = run_manual_scan(ticker)
+            return jsonify({
+                "ticker": ticker,
+                "score": score,
+                "breakdown": breakdown,
+                "fetched_at": datetime.utcnow().isoformat() + "Z"
+            })
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
-    return jsonify({
-        "ticker": ticker,
-        "score": score,
-        "breakdown": breakdown,
-        "fetched_at": datetime.utcnow().isoformat() + "Z"
-    })
+@app.route('/autoscan')
+def autoscan():
+    ticker = request.args.get('ticker')
+    if not ticker:
+        return jsonify({"error": "ticker query param required"}), 400
+    # Always use the dynamic scanner
+    result = run_auto_scan(ticker, context=True)
+    if isinstance(result, dict):
+        result["fetched_at"] = datetime.utcnow().isoformat() + "Z"
+        return jsonify(result)
+    else:
+        try:
+            score, breakdown = result
+            return jsonify({
+                "ticker": ticker,
+                "score": score,
+                "breakdown": breakdown,
+                "fetched_at": datetime.utcnow().isoformat() + "Z"
+            })
+        except Exception:
+            return jsonify({"error": "Invalid scan result format"}), 500
 
 if __name__ == "__main__":
+    # For local development only; Render uses Gunicorn
     app.run(host="0.0.0.0", port=5000)
