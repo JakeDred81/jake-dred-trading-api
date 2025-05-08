@@ -17,18 +17,24 @@ def scan():
     ticker = request.args.get('ticker')
     context = request.args.get('context', None)
 
-    # Call the appropriate scan function
+    # Execute the appropriate scan
     if context:
         result = run_auto_scan(ticker, context)
     else:
         result = run_manual_scan(ticker)
 
-    # Safely unpack score and breakdown (ignore extra values)
-    try:
-        score, breakdown = result
-    except (ValueError, TypeError):
-        # result might include extra elements; grab first two
-        score, breakdown = result[0], result[1]
+    # Parse out score & breakdown from result
+    if isinstance(result, dict):
+        score = result.get("score")
+        breakdown = result.get("breakdown")
+    else:
+        # Fallback for tuple/list results
+        try:
+            score, breakdown = result
+        except Exception:
+            # Fallback: take first two elements
+            score = result[0]
+            breakdown = result[1]
 
     return jsonify({
         "ticker": ticker,
@@ -38,5 +44,4 @@ def scan():
     })
 
 if __name__ == "__main__":
-    # For local development only; Render uses Gunicorn
     app.run(host="0.0.0.0", port=5000)
