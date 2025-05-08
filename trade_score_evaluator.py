@@ -1,3 +1,4 @@
+# updated 2025-05-08: added score_trade()
 import random
 
 def score_trade(ticker, context=None):
