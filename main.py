@@ -1,3 +1,4 @@
+# Updated main.py
 from flask import Flask, request, jsonify
 from run_scan import run_auto_scan, run_manual_scan
 from datetime import datetime
@@ -29,9 +30,7 @@ def scan():
         })
     except Exception as e:
         app.logger.error(f"Scan error for {ticker}: {e}")
-        return jsonify({
-            "error": f"Scan failed for {ticker}: {str(e)}"
-        }), 500
+        return jsonify({"error": f"Scan failed for {ticker}: {str(e)}"}), 500
 
 @app.route('/autoscan')
 def autoscan():
