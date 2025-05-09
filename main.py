@@ -1,14 +1,8 @@
-from flask import Flask, request, jsonify, send_from_directory
-import os
+from flask import Flask, request, jsonify
 from run_scan import run_auto_scan, run_manual_scan
 from datetime import datetime
 
 app = Flask(__name__)
-
-# Serve the OpenAPI spec for plugin import
-@app.route('/openapi.json')
-def openapi_spec():
-    return send_from_directory(os.path.dirname(__file__), 'openapi.json')
 
 @app.route('/')
 def home():
@@ -22,48 +16,50 @@ def healthz():
 def scan():
     ticker = request.args.get('ticker')
     context = request.args.get('context', None)
-    if context == 'auto':
-        result = run_auto_scan(ticker)
-    else:
-        result = run_manual_scan(ticker)
-
-    # Normalize result: if tuple (score, breakdown), convert to dict
-    if isinstance(result, tuple) and len(result) == 2:
-        score, breakdown = result
-        payload = {
+    try:
+        if context == 'auto':
+            score, breakdown = run_auto_scan(ticker)
+        else:
+            score, breakdown = run_manual_scan(ticker)
+        return jsonify({
             "ticker": ticker,
             "score": score,
             "breakdown": breakdown,
-        }
-    elif isinstance(result, dict):
-        payload = result.copy()
-    else:
-        return jsonify({"error": "Unexpected scan result format"}), 500
-
-    payload["fetched_at"] = datetime.utcnow().isoformat() + "Z"
-    return jsonify(payload)
+            "fetched_at": datetime.utcnow().isoformat() + "Z"
+        })
+    except Exception as e:
+        app.logger.error(f"Scan error for {ticker}: {e}")
+        return jsonify({
+            "error": f"Scan failed for {ticker}: {str(e)}"
+        }), 500
 
 @app.route('/autoscan')
 def autoscan():
     ticker = request.args.get('ticker')
-    result = run_auto_scan(ticker)
-
-    # Normalize result as above
-    if isinstance(result, tuple) and len(result) == 2:
-        score, breakdown = result
-        payload = {
+    try:
+        score, breakdown = run_auto_scan(ticker)
+        return jsonify({
             "ticker": ticker,
             "score": score,
             "breakdown": breakdown,
-        }
-    elif isinstance(result, dict):
-        payload = result.copy()
-    else:
-        return jsonify({"error": "Unexpected autoscan result format"}), 500
-
-    payload["fetched_at"] = datetime.utcnow().isoformat() + "Z"
-    return jsonify(payload)
+            "fetched_at": datetime.utcnow().isoformat() + "Z"
+        })
+    except Exception as e:
+        app.logger.error(f"Autoscan error for {ticker}: {e}")
+        try:
+            score, breakdown = run_manual_scan(ticker)
+            return jsonify({
+                "ticker": ticker,
+                "score": score,
+                "breakdown": breakdown,
+                "fetched_at": datetime.utcnow().isoformat() + "Z",
+                "note": "Returned manual scan as fallback"
+            })
+        except Exception as e2:
+            app.logger.error(f"Fallback manual scan also failed for {ticker}: {e2}")
+            return jsonify({
+                "error": f"Autoscan failed: {str(e)}; fallback manual scan also failed: {str(e2)}"
+            }), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=5000)
