@@ -23,29 +23,47 @@ def scan():
     ticker = request.args.get('ticker')
     context = request.args.get('context', None)
     if context == 'auto':
-        # autoscan logic when context flag is set
-        score, breakdown = run_auto_scan(ticker)
+        result = run_auto_scan(ticker)
     else:
-        score, breakdown = run_manual_scan(ticker)
-    return jsonify({
-        "ticker": ticker,
-        "score": score,
-        "breakdown": breakdown,
-        "fetched_at": datetime.utcnow().isoformat() + "Z"
-    })
+        result = run_manual_scan(ticker)
+
+    # Normalize result: if tuple (score, breakdown), convert to dict
+    if isinstance(result, tuple) and len(result) == 2:
+        score, breakdown = result
+        payload = {
+            "ticker": ticker,
+            "score": score,
+            "breakdown": breakdown,
+        }
+    elif isinstance(result, dict):
+        payload = result.copy()
+    else:
+        return jsonify({"error": "Unexpected scan result format"}), 500
+
+    payload["fetched_at"] = datetime.utcnow().isoformat() + "Z"
+    return jsonify(payload)
 
 @app.route('/autoscan')
 def autoscan():
     ticker = request.args.get('ticker')
-    score, breakdown = run_auto_scan(ticker)
-    return jsonify({
-        "ticker": ticker,
-        "score": score,
-        "breakdown": breakdown,
-        "fetched_at": datetime.utcnow().isoformat() + "Z"
-    })
+    result = run_auto_scan(ticker)
+
+    # Normalize result as above
+    if isinstance(result, tuple) and len(result) == 2:
+        score, breakdown = result
+        payload = {
+            "ticker": ticker,
+            "score": score,
+            "breakdown": breakdown,
+        }
+    elif isinstance(result, dict):
+        payload = result.copy()
+    else:
+        return jsonify({"error": "Unexpected autoscan result format"}), 500
+
+    payload["fetched_at"] = datetime.utcnow().isoformat() + "Z"
+    return jsonify(payload)
 
 if __name__ == "__main__":
-    # Use PORT env var if provided by hosting service
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
