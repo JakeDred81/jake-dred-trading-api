@@ -1,0 +1,144 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Jake Dred\u2019s Custom Trading Assistant",
+    "version": "0.1.0",
+    "description": "Tactical trading assistant with market scanners, journal prompts, and real-time signal scanning."
+  },
+  "servers": [
+    {
+      "url": "https://jake-dred-trading-api.onrender.com"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "get_home",
+        "summary": "Home Route",
+        "description": "Returns a confirmation that the assistant is live.",
+        "responses": {
+          "200": {
+            "description": "Service is live."
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "get_health",
+        "summary": "Health Check",
+        "description": "Returns the current health status of the API.",
+        "responses": {
+          "200": {
+            "description": "API is up and healthy."
+          }
+        }
+      }
+    },
+    "/scan": {
+      "get": {
+        "operationId": "get_scan",
+        "summary": "Manual Scan",
+        "description": "Run a manual scan on a fixed set of tickers for trade setups.",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Ticker symbol to scan."
+          },
+          {
+            "name": "context",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional flag `auto` to trigger auto-scan logic."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns ticker, score, breakdown, and fetched_at timestamp.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ticker": {
+                      "type": "string"
+                    },
+                    "score": {
+                      "type": "integer"
+                    },
+                    "breakdown": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "integer"
+                      }
+                    },
+                    "fetched_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/autoscan": {
+      "get": {
+        "operationId": "get_autoscan",
+        "summary": "Auto Scan",
+        "description": "Run a dynamic scan using high-volume tickers sourced from Yahoo Finance.",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Ticker symbol to autoscan."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns dynamic scan result with breakdown and fetched_at timestamp.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ticker": {
+                      "type": "string"
+                    },
+                    "score": {
+                      "type": "integer"
+                    },
+                    "breakdown": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "integer"
+                      }
+                    },
+                    "fetched_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
